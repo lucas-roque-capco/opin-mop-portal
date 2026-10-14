@@ -1,0 +1,16 @@
+:root {
+  --background: #ffffff;
+}
+
+@font-face {
+  font-family: "Blogger Sans";
+  src: url("/fonts/Blogger_Sans-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  font-family: "Roboto", "Blogger Sans", Arial, sans-serif;
+  background: #fafafa;
+}
