@@ -34,6 +34,11 @@ export type MopPcmIntegration =
   | "FUNIL_CONSENTIMENTO"
   | "APIS_TRANSACIONAIS";
 
+export type MopErrorOrigin =
+  | "MOP_SERVER"
+  | "MOP_CLIENT"
+  | "PARTICIPANT_VALIDATION";
+
 export interface MopErrorRecord {
   id: string;
   timestamp: string;
@@ -59,6 +64,7 @@ export interface MopErrorRecord {
   origin: string | null;
   details: Record<string, unknown>;
   requestDto: Record<string, unknown> | null;
+  errorOrigin?: MopErrorOrigin;
 }
 
 export interface ListErrorsResponse {
@@ -81,6 +87,7 @@ export interface ListErrorsParams {
   scope?: string;
   pcmIntegration?: string;
   mopClientVisible?: string;
+  errorOrigin?: string;
   page?: number;
   limit?: number;
 }

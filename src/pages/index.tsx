@@ -1,7 +1,11 @@
 import ErrorsFilters, {
+  defaultErrorsFilters,
   ErrorsFilterState,
 } from "@/src/components/ErrorsFilters";
 import ErrorsTable from "@/src/components/ErrorsTable";
+import ParticipantDashboard from "@/src/components/ParticipantDashboard";
+import ParticipantValidations from "@/src/components/ParticipantValidations";
+import { useAccessView } from "@/src/context/AccessView";
 import { fetchErrors } from "@/src/services/errorsApi";
 import type { MopErrorRecord } from "@/src/types/errors";
 import {
@@ -12,11 +16,10 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
-const EMPTY_FILTERS: ErrorsFilterState = {};
-
 export default function ErrorsPage() {
-  const [filters, setFilters] = useState<ErrorsFilterState>(EMPTY_FILTERS);
-  const [applied, setApplied] = useState<ErrorsFilterState>(EMPTY_FILTERS);
+  const { view, participantSection } = useAccessView();
+  const [filters, setFilters] = useState<ErrorsFilterState>(defaultErrorsFilters);
+  const [applied, setApplied] = useState<ErrorsFilterState>(defaultErrorsFilters);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [data, setData] = useState<MopErrorRecord[]>([]);
@@ -28,11 +31,11 @@ export default function ErrorsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchErrors({
-        ...applied,
-        page,
-        limit,
-      });
+      const res = await fetchErrors(
+        view === "participant"
+          ? { errorOrigin: "PARTICIPANT_VALIDATION", page: 1, limit: 100 }
+          : { ...applied, page, limit },
+      );
       setData(res.data || []);
       setTotal(res.total ?? 0);
     } catch (e: unknown) {
@@ -47,40 +50,62 @@ export default function ErrorsPage() {
     } finally {
       setLoading(false);
     }
-  }, [applied, page, limit]);
+  }, [applied, page, limit, view]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  if (view === "participant") {
+    return (
+      <Box sx={{ pt: 3, maxWidth: 1200 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+            <CircularProgress sx={{ color: "#8CD23F" }} />
+          </Box>
+        ) : participantSection === "dashboard" ? (
+          <ParticipantDashboard validations={data} />
+        ) : (
+          <ParticipantValidations data={data} />
+        )}
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ pt: 3, maxWidth: 1400, mx: "auto" }}>
       <Typography
         variant="h4"
         sx={{
-          fontFamily: "Blogger Sans, Arial, sans-serif",
+          fontFamily: "Roboto, Arial, sans-serif",
           color: "#193F12",
           fontWeight: 700,
           mb: 1,
         }}
       >
-        Erros do MOP
+        Erros e alertas
       </Typography>
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-        Listagem dos erros e warnings registrados pelo microserviço{" "}
-        <strong>mop-server-errors</strong>.
+        O que o MOP Server, o MOP Client e as participantes registraram.
       </Typography>
 
       <ErrorsFilters
         value={filters}
         onChange={setFilters}
-        onApply={() => {
+        onApply={(next) => {
           setPage(1);
-          setApplied({ ...filters });
+          setFilters(next);
+          setApplied(next);
         }}
         onClear={() => {
-          setFilters(EMPTY_FILTERS);
-          setApplied(EMPTY_FILTERS);
+          const next = defaultErrorsFilters();
+          setFilters(next);
+          setApplied(next);
           setPage(1);
         }}
       />

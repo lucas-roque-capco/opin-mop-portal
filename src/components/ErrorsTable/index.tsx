@@ -1,8 +1,6 @@
-import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Box,
   Chip,
-  IconButton,
   Table,
   TableBody,
   TableCell,
@@ -10,26 +8,20 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  Typography,
 } from "@mui/material";
 import { useState } from "react";
 import ErrorDetailDialog from "@/src/components/ErrorDetailDialog";
 import type { MopErrorRecord } from "@/src/types/errors";
-import { labelFor, labelForErrorCode } from "@/src/utils/errorLabels";
+import { labelFor, resolveErrorOrigin } from "@/src/utils/errorLabels";
 
 const HEADERS = [
   "Data/hora",
+  "Origem",
   "Severidade",
   "Criticidade",
-  "Tipo de ocorrência",
-  "Microserviço",
-  "Domínio",
-  "Mensagem",
-  "Visível ao Client",
   "HTTP",
   "Organização",
   "Correlation ID",
-  "",
 ];
 
 interface ErrorsTableProps {
@@ -102,6 +94,9 @@ export default function ErrorsTable({
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     {new Date(row.timestamp).toLocaleString("pt-BR")}
                   </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {labelFor("errorOrigin", resolveErrorOrigin(row.errorOrigin))}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       size="small"
@@ -110,38 +105,6 @@ export default function ErrorsTable({
                     />
                   </TableCell>
                   <TableCell>{labelFor("criticality", row.criticality)}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {labelForErrorCode(row.errorCode)}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontFamily: "monospace", display: "block" }}
-                    >
-                      {row.errorCode}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{labelFor("service", row.service)}</TableCell>
-                  <TableCell>{labelFor("domain", row.domain)}</TableCell>
-                  <TableCell
-                    sx={{
-                      maxWidth: 280,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={row.message}
-                  >
-                    {row.message}
-                  </TableCell>
-                  <TableCell>
-                    {row.mopClientVisible ? (
-                      <Chip size="small" color="primary" label="Sim" />
-                    ) : (
-                      <Chip size="small" variant="outlined" label="Não" />
-                    )}
-                  </TableCell>
                   <TableCell>{row.httpStatus ?? "—"}</TableCell>
                   <TableCell
                     sx={{
@@ -168,15 +131,6 @@ export default function ErrorsTable({
                     title={row.correlationId ?? undefined}
                   >
                     {row.correlationId ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      aria-label="ver detalhe"
-                      sx={{ color: "#193F12" }}
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))

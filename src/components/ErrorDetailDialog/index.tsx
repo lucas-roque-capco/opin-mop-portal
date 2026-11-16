@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import type { ReactNode } from "react";
 import type { MopErrorRecord } from "@/src/types/errors";
-import { labelFor, labelForErrorCode } from "@/src/utils/errorLabels";
+import { labelFor, labelForErrorCode, resolveErrorOrigin } from "@/src/utils/errorLabels";
 
 interface ErrorDetailDialogProps {
   error: MopErrorRecord | null;
@@ -227,6 +227,12 @@ export default function ErrorDetailDialog({
               <Grid container spacing={1}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <Field
+                    label="Origem do erro"
+                    value={labelFor("errorOrigin", resolveErrorOrigin(error.errorOrigin))}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Field
                     label="Data/hora"
                     value={new Date(error.timestamp).toLocaleString("pt-BR")}
                   />
@@ -351,7 +357,7 @@ export default function ErrorDetailDialog({
               onClick={onClose}
               variant="contained"
               color="primary"
-              sx={{ textTransform: "none", fontWeight: 600 }}
+              sx={{ textTransform: "none", fontWeight: 500 }}
             >
               Fechar
             </Button>

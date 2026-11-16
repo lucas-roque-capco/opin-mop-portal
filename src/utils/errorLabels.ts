@@ -58,6 +58,12 @@ export const MOP_CLIENT_VISIBLE_OPTIONS: FilterOption[] = [
   { value: "false", label: "Somente interno (não visto pelo Client)" },
 ];
 
+export const ERROR_ORIGIN_OPTIONS: FilterOption[] = [
+  { value: "MOP_CLIENT", label: "MOP Client" },
+  { value: "MOP_SERVER", label: "MOP Server" },
+  { value: "PARTICIPANT_VALIDATION", label: "Participante" },
+];
+
 export const PCM_ACTION_OPTIONS: FilterOption[] = [
   { value: "PUBLISH_SKIPPED", label: "Publicação ignorada" },
   { value: "PUBLISH_FAILED", label: "Falha na publicação" },
@@ -127,6 +133,22 @@ export const ERROR_CODE_LABELS: Record<string, string> = {
   ANON_STREAM_UNDEFINED: "Falha ao ler stream do Blob",
 };
 
+export const ERROR_CODE_OPTIONS: FilterOption[] = Object.entries(ERROR_CODE_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+
+/** Catálogo fechado por origem. Client e participante enviam código livre, fora desta lista. */
+const ERROR_CODES_BY_ORIGIN: Record<string, FilterOption[]> = {
+  MOP_SERVER: ERROR_CODE_OPTIONS,
+  MOP_CLIENT: [],
+  PARTICIPANT_VALIDATION: [],
+};
+
+export function errorCodesForOrigin(origin: string | null | undefined): FilterOption[] {
+  if (!origin) return [];
+  return ERROR_CODES_BY_ORIGIN[origin] ?? [];
+}
+
 const labelMaps: Record<string, FilterOption[]> = {
   severity: SEVERITY_OPTIONS,
   criticality: CRITICALITY_OPTIONS,
@@ -137,6 +159,7 @@ const labelMaps: Record<string, FilterOption[]> = {
   pcmIntegration: PCM_INTEGRATION_OPTIONS,
   pcmAction: PCM_ACTION_OPTIONS,
   mopClientVisible: MOP_CLIENT_VISIBLE_OPTIONS,
+  errorOrigin: ERROR_ORIGIN_OPTIONS,
 };
 
 /** Converte valor da API para rótulo amigável (tabela/chips). */
@@ -149,5 +172,18 @@ export function labelFor(field: string, value: string | null | undefined): strin
 export function labelForErrorCode(code: string | null | undefined): string {
   if (!code) return "—";
   return ERROR_CODE_LABELS[code] ?? code;
+}
+
+export function resolveErrorOrigin(
+  origin: string | null | undefined,
+): "MOP_SERVER" | "MOP_CLIENT" | "PARTICIPANT_VALIDATION" {
+  if (
+    origin === "MOP_CLIENT" ||
+    origin === "PARTICIPANT_VALIDATION" ||
+    origin === "MOP_SERVER"
+  ) {
+    return origin;
+  }
+  return "MOP_SERVER";
 }
 

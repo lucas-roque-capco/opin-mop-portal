@@ -2,13 +2,13 @@ import { createTheme } from "@mui/material";
 
 export const theme = createTheme({
   typography: {
-    fontFamily: "Roboto, Blogger Sans, Arial, sans-serif",
-    h1: {
-      fontFamily: "Blogger Sans, Arial, sans-serif",
-    },
-    body1: {
-      fontFamily: "Roboto, Arial, sans-serif",
-    },
+    fontFamily: "Roboto, Arial, sans-serif",
+    h1: { fontFamily: "Roboto, Arial, sans-serif", fontWeight: 700 },
+    h4: { fontFamily: "Roboto, Arial, sans-serif", fontWeight: 700 },
+    h6: { fontFamily: "Roboto, Arial, sans-serif" },
+    body1: { fontFamily: "Roboto, Arial, sans-serif" },
+    body2: { fontFamily: "Roboto, Arial, sans-serif" },
+    button: { fontFamily: "Roboto, Arial, sans-serif", fontWeight: 500 },
   },
   palette: {
     primary: {
