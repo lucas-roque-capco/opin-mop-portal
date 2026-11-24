@@ -1,24 +1,12 @@
-import { Box, Typography } from "@mui/material";
-import { useMemo, type ReactNode } from "react";
-import type { MopErrorRecord } from "@/src/types/errors";
+import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  fetchParticipantSummary,
+  type ParticipantSummary,
+} from "@/src/services/errorsApi";
 
 /** Envios da participante que não geraram item em validations. Ainda não há API de arquivos. */
 const FILES_WITHOUT_VALIDATION = 11;
-
-interface ParticipantDashboardProps {
-  validations: MopErrorRecord[];
-}
-
-function countBy(rows: MopErrorRecord[], key: (row: MopErrorRecord) => string) {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    const name = key(row) || "Não informado";
-    map.set(name, (map.get(name) ?? 0) + 1);
-  }
-  return [...map.entries()]
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-}
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -120,25 +108,45 @@ function Bars({ items, color }: { items: { label: string; value: number }[]; col
   );
 }
 
-export default function ParticipantDashboard({ validations }: ParticipantDashboardProps) {
-  const stats = useMemo(() => {
-    const filesWithValidation = new Set(
-      validations.map((row) => row.correlationId).filter(Boolean),
-    ).size;
-    const byType = countBy(validations, (row) => row.message);
-    const byPath = countBy(validations, (row) => row.path || "Sem path");
-    const errors = validations.filter((row) => row.severity === "ERROR").length;
-    const warnings = validations.filter((row) => row.severity === "WARNING").length;
-    return {
-      sent: filesWithValidation + FILES_WITHOUT_VALIDATION,
-      withValidation: filesWithValidation,
-      clean: FILES_WITHOUT_VALIDATION,
-      byType,
-      byPath,
-      errors,
-      warnings,
+export default function ParticipantDashboard() {
+  const [summary, setSummary] = useState<ParticipantSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchParticipantSummary({})
+      .then((data) => {
+        if (!cancelled) setSummary(data);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message =
+          (err as { response?: { data?: { message?: string } }; message?: string })
+            ?.response?.data?.message ||
+          (err as { message?: string })?.message ||
+          "Falha ao carregar o dashboard";
+        setError(message);
+        setSummary(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-  }, [validations]);
+  }, []);
+
+  const stats = {
+    withValidation: summary?.filesWithValidation ?? 0,
+    clean: FILES_WITHOUT_VALIDATION,
+    byType: summary?.byMessage ?? [],
+    byPath: summary?.byPath ?? [],
+    errors: summary?.errors ?? 0,
+    warnings: summary?.warnings ?? 0,
+  };
 
   return (
     <Box>
@@ -152,6 +160,16 @@ export default function ParticipantDashboard({ validations }: ParticipantDashboa
         Acompanha os arquivos enviados pela participante e as validações geradas em cada chamada.
       </Typography>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+          <CircularProgress sx={{ color: "#8CD23F" }} />
+        </Box>
+      ) : (
       <Box
         sx={{
           display: "grid",
@@ -183,6 +201,7 @@ export default function ParticipantDashboard({ validations }: ParticipantDashboa
           <Bars color="#8CD23F" items={stats.byPath.slice(0, 6)} />
         </Card>
       </Box>
+      )}
     </Box>
   );
 }

@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import axios from "axios";
 
-export default async function handler(
+export async function proxyErrors(
   req: NextApiRequest,
   res: NextApiResponse,
+  path: string,
 ) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -11,19 +12,12 @@ export default async function handler(
   }
 
   const baseUrl = (
-    process.env.MOP_ERRORS_API_URL || "http://localhost:3010"
+    process.env.MOP_ENTRYPOINT_URL || "http://localhost:3000"
   ).replace(/\/$/, "");
-  const apiKey = process.env.MOP_ERRORS_API_KEY || "";
 
   try {
-    const headers: Record<string, string> = {};
-    if (apiKey) {
-      headers["X-MOP-API-Key"] = apiKey;
-    }
-
-    const { data } = await axios.get(`${baseUrl}/errors`, {
+    const { data } = await axios.get(`${baseUrl}${path}`, {
       params: req.query,
-      headers,
       timeout: 15000,
     });
 
@@ -35,7 +29,7 @@ export default async function handler(
     };
     const status = ax.response?.status || 502;
     return res.status(status).json({
-      message: "Failed to fetch errors from mop-server-errors",
+      message: "Falha ao consultar erros no entrypoint",
       detail: ax.response?.data ?? ax.message,
     });
   }

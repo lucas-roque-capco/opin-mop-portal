@@ -6,7 +6,7 @@ import ErrorsTable from "@/src/components/ErrorsTable";
 import ParticipantDashboard from "@/src/components/ParticipantDashboard";
 import ParticipantValidations from "@/src/components/ParticipantValidations";
 import { useAccessView } from "@/src/context/AccessView";
-import { fetchErrors } from "@/src/services/errorsApi";
+import { fetchMopErrors } from "@/src/services/errorsApi";
 import type { MopErrorRecord } from "@/src/types/errors";
 import {
   Alert,
@@ -31,11 +31,7 @@ export default function ErrorsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchErrors(
-        view === "participant"
-          ? { errorOrigin: "PARTICIPANT_VALIDATION", page: 1, limit: 100 }
-          : { ...applied, page, limit },
-      );
+      const res = await fetchMopErrors({ ...applied, page, limit });
       setData(res.data || []);
       setTotal(res.total ?? 0);
     } catch (e: unknown) {
@@ -50,28 +46,20 @@ export default function ErrorsPage() {
     } finally {
       setLoading(false);
     }
-  }, [applied, page, limit, view]);
+  }, [applied, page, limit]);
 
   useEffect(() => {
+    if (view !== "mop") return;
     load();
-  }, [load]);
+  }, [load, view]);
 
   if (view === "participant") {
     return (
       <Box sx={{ pt: 3, maxWidth: 1200 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-            <CircularProgress sx={{ color: "#8CD23F" }} />
-          </Box>
-        ) : participantSection === "dashboard" ? (
-          <ParticipantDashboard validations={data} />
+        {participantSection === "dashboard" ? (
+          <ParticipantDashboard />
         ) : (
-          <ParticipantValidations data={data} />
+          <ParticipantValidations />
         )}
       </Box>
     );

@@ -24,13 +24,10 @@ import {
   Typography,
 } from "@mui/material";
 import axios from "axios";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import PeriodToolbar, { monthsAgo, PERIOD_BUTTON_SX } from "@/src/components/PeriodToolbar";
+import { fetchParticipantErrors } from "@/src/services/errorsApi";
 import type { MopErrorRecord } from "@/src/types/errors";
-
-interface ParticipantValidationsProps {
-  data: MopErrorRecord[];
-}
 
 const HEADERS = ["Data/hora", "Código", "Validação", "Endpoint", "Situação"];
 
@@ -57,7 +54,7 @@ function requestBody(row: MopErrorRecord): unknown {
 
 const initialPeriod = monthsAgo(3);
 
-export default function ParticipantValidations({ data }: ParticipantValidationsProps) {
+export default function ParticipantValidations() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [severity, setSeverity] = useState("");
   const [code, setCode] = useState("");
@@ -71,6 +68,11 @@ export default function ParticipantValidations({ data }: ParticipantValidationsP
   });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rows, setRows] = useState<MopErrorRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [codes, setCodes] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<MopErrorRecord | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -78,23 +80,61 @@ export default function ParticipantValidations({ data }: ParticipantValidationsP
     null,
   );
 
-  const codes = useMemo(
-    () => [...new Set(data.map((row) => row.errorCode))].sort(),
-    [data],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    fetchParticipantErrors({
+      from: applied.from || undefined,
+      to: applied.to || undefined,
+      severity: applied.severity || undefined,
+      errorCode: applied.code || undefined,
+      page: page + 1,
+      limit: rowsPerPage,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setRows(res.data || []);
+        setTotal(res.total ?? 0);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const message =
+          (error as { response?: { data?: { message?: string } }; message?: string })
+            ?.response?.data?.message ||
+          (error as { message?: string })?.message ||
+          "Falha ao carregar validações";
+        setLoadError(message);
+        setRows([]);
+        setTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applied, page, rowsPerPage]);
 
-  const filtered = useMemo(() => {
-    return data.filter((row) => {
-      if (applied.severity && row.severity !== applied.severity) return false;
-      if (applied.code && row.errorCode !== applied.code) return false;
-      const day = row.timestamp?.slice(0, 10) ?? "";
-      if (applied.from && day < applied.from) return false;
-      if (applied.to && day > applied.to) return false;
-      return true;
-    });
-  }, [data, applied]);
-
-  const pageRows = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  useEffect(() => {
+    let cancelled = false;
+    fetchParticipantErrors({
+      from: applied.from || undefined,
+      to: applied.to || undefined,
+      page: 1,
+      limit: 100,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setCodes([...new Set((res.data || []).map((row) => row.errorCode))].sort());
+      })
+      .catch(() => {
+        if (!cancelled) setCodes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applied.from, applied.to]);
 
   const open = (row: MopErrorRecord) => {
     setSelected(row);
@@ -260,6 +300,12 @@ export default function ParticipantValidations({ data }: ParticipantValidationsP
         )}
       </Box>
 
+      {loadError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {loadError}
+        </Alert>
+      )}
+
       <TableContainer sx={{ border: "1px solid #e6e6e6", borderRadius: 1, bgcolor: "#fff" }}>
         <Table size="small">
           <TableHead>
@@ -272,14 +318,20 @@ export default function ParticipantValidations({ data }: ParticipantValidationsP
             </TableRow>
           </TableHead>
           <TableBody>
-            {pageRows.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={HEADERS.length} align="center" sx={{ py: 4 }}>
+                  Carregando...
+                </TableCell>
+              </TableRow>
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={HEADERS.length} align="center" sx={{ py: 4 }}>
                   Nenhuma validação encontrada.
                 </TableCell>
               </TableRow>
             ) : (
-              pageRows.map((row) => (
+              rows.map((row) => (
                 <TableRow key={row.id} hover onClick={() => open(row)} sx={{ cursor: "pointer" }}>
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     {new Date(row.timestamp).toLocaleString("pt-BR")}
@@ -301,7 +353,7 @@ export default function ParticipantValidations({ data }: ParticipantValidationsP
         </Table>
         <TablePagination
           component="div"
-          count={filtered.length}
+          count={total}
           page={page}
           rowsPerPage={rowsPerPage}
           onPageChange={(_, next) => setPage(next)}

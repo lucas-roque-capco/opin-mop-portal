@@ -6,12 +6,11 @@ Identidade visual alinhada ao `opin-portal-frontend` (Open Insurance: verde `#8C
 
 ## Pré-requisitos
 
-1. Microserviço de erros rodando na porta **3010**:
+1. Entrypoint do MOP na porta **3000**. Ele consulta o serviço de erros por dentro; essa porta não é publicada.
 
 ```bash
 cd ../opin-mop-server
-docker compose -f docker-compose.local.yml up --build errors-service
-# ou: npm run start:open-insurance-mop-server-errors
+docker compose -f docker-compose.local.yml up --build entrypoint-service errors-service
 ```
 
 2. Node 20+.
@@ -30,10 +29,9 @@ Abra [http://localhost:3000](http://localhost:3000).
 
 | Variável | Descrição |
 |----------|-----------|
-| `MOP_ERRORS_API_URL` | Base URL do `mop-server-errors` (default `http://localhost:3010`) |
-| `MOP_ERRORS_API_KEY` | Valor do header `X-MOP-API-Key` (só no servidor Next — BFF `/api/errors`) |
+| `MOP_ENTRYPOINT_URL` | Base do entrypoint (default `http://localhost:3000`) |
 
-O browser **nunca** chama o errors-service diretamente; usa `/api/errors` como proxy.
+O browser não chama o MOP. Os BFFs `/api/errors/mop`, `/api/errors/participant` e `/api/errors/participant/summary` repassam a query para o entrypoint.
 
 ## Scripts
 
